@@ -1,6 +1,5 @@
 package com.example.listpics;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.ref.SoftReference;
 import java.net.HttpURLConnection;
@@ -8,13 +7,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 
 import android.support.v7.app.ActionBarActivity;
 import android.graphics.Bitmap;
@@ -22,18 +14,15 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapFactory.Options;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.URLUtil;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 
-public class MainActivity extends ActionBarActivity {
+public class CopyOfMainActivity extends ActionBarActivity {
 	ListView listView;
 	public final static int IMGAE_MAX_WIDTH = 500;
 	public final static int IMAGE_MAX_HEIFHT = 500;
@@ -47,7 +36,7 @@ public class MainActivity extends ActionBarActivity {
 			"http://c.hiphotos.baidu.com/image/pic/item/dbb44aed2e738bd42177fa21a38b87d6277ff948.jpg",
 			"http://g.hiphotos.baidu.com/image/pic/item/77c6a7efce1b9d1613a13169f1deb48f8c546450.jpg",
 			"http://g.hiphotos.baidu.com/image/pic/item/a9d3fd1f4134970ade6ee02897cad1c8a7865d9c.jpg",
-			"http://a.hiphotos.baidu.com/image/pic/item/caef76094b36acaf266fcff17ed98d1001e99c2b.jpg",
+			"http://imgt6.bdstatic.com/it/u=2,801627169&fm=25&gp=0.jpg",
 			"http://f.hiphotos.baidu.com/image/pic/item/0ff41bd5ad6eddc4cc97b9f03bdbb6fd5266334c.jpg",
 			"http://c.hiphotos.baidu.com/image/pic/item/bf096b63f6246b6066845b7ce9f81a4c510fa234.jpg",
 			"http://b.hiphotos.baidu.com/image/pic/item/a8ec8a13632762d056c418b6a2ec08fa503dc6c5.jpg",
@@ -88,7 +77,6 @@ public class MainActivity extends ActionBarActivity {
 	 */
 	public HashMap<String, SoftReference<Bitmap>> softCachedHashMap = new HashMap<String, SoftReference<Bitmap>>(
 			10);
-	ExecutorService executorService;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -100,7 +88,6 @@ public class MainActivity extends ActionBarActivity {
 		fileUtil = new FileUtil(getApplicationContext());
 		fileUtil.removeExpiredCached();
 		fileUtil.upDateCached();
-		executorService = Executors.newCachedThreadPool();
 	}
 
 	/**
@@ -132,85 +119,6 @@ public class MainActivity extends ActionBarActivity {
 
 		return null;
 	}
-
-	class MyThread extends Thread {
-		ImageView imageView;
-		String url;
-		Bitmap showBitmap;
-
-		public MyThread(ImageView imageView, String url) {
-			// TODO Auto-generated constructor stub
-			this.imageView = imageView;
-			this.url = url;
-		}
-
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-
-			try {
-
-				DefaultHttpClient client = new DefaultHttpClient();
-				HttpResponse response = client.execute(new HttpGet(url));
-
-				byte[] bs = EntityUtils.toByteArray(response.getEntity());
-
-				ByteArrayInputStream inputStream = new ByteArrayInputStream(bs);
-
-				// urlCon = new URL(url);
-				// HttpURLConnection connection = (HttpURLConnection) urlCon
-				// .openConnection();
-				// InputStream inputStream = connection.getInputStream();
-
-				Options options = new Options();
-
-				options.inJustDecodeBounds = true;
-				BitmapFactory.decodeStream(inputStream, null, options);
-				int scale = 1;
-				while ((options.outWidth / scale) > IMGAE_MAX_WIDTH
-						|| (options.outHeight / scale) > IMAGE_MAX_HEIFHT) {
-					scale *= 2;
-				}
-				options.inSampleSize = scale;
-				options.inJustDecodeBounds = false;
-				// HttpURLConnection connection2 = (HttpURLConnection) urlCon
-				// .openConnection();
-				// InputStream inputStream2 = connection2.getInputStream();
-
-				ByteArrayInputStream inputStream2 = new ByteArrayInputStream(bs);
-				showBitmap = BitmapFactory.decodeStream(inputStream2, null,
-						options);
-				if(showBitmap!=null)
-				{
-					hardBitmapCached.put(url, showBitmap);
-					fileUtil.saveBitmapToSD(showBitmap, url);
-				}
-				Message message = handler.obtainMessage();
-
-				Bundle data = new Bundle();
-				data.putParcelable("bitmap", showBitmap);
-
-				message.setData(data);
-				message.obj = imageView;
-
-				message.sendToTarget();
-
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-
-	Handler handler = new Handler() {
-		public void handleMessage(android.os.Message msg) {
-			Bundle bundle = msg.getData();
-			Bitmap bitmap = bundle.getParcelable("bitmap");
-			ImageView imageView = (ImageView) msg.obj;
-			imageView.setImageBitmap(bitmap);
-
-		};
-	};
 
 	class MyAdapter extends BaseAdapter {
 
@@ -250,11 +158,8 @@ public class MainActivity extends ActionBarActivity {
 				if (bitmap == null)
 
 				{
-					// MyTask myTask = new MyTask(pics[position]);
-					// myTask.execute(imageView);
-					MyThread myThread = new MyThread(imageView, pics[position]);
-
-					executorService.execute(myThread);
+					MyTask myTask = new MyTask(pics[position]);
+					myTask.execute(imageView);
 				} else {
 					imageView.setImageBitmap(bitmap);
 				}
@@ -266,7 +171,7 @@ public class MainActivity extends ActionBarActivity {
 		}
 	}
 
-	class MyTask extends AsyncTask<ImageView, Void, Bitmap> {
+	class MyTask extends PreReadTask<ImageView, Void, Bitmap> {
 		String url;
 		ImageView imageView;
 
@@ -283,18 +188,10 @@ public class MainActivity extends ActionBarActivity {
 			URL urlCon;
 			try {
 
-				DefaultHttpClient client = new DefaultHttpClient();
-				HttpResponse response = client.execute(new HttpGet(url));
-
-				byte[] bs = EntityUtils.toByteArray(response.getEntity());
-
-				ByteArrayInputStream inputStream = new ByteArrayInputStream(bs);
-
-				// urlCon = new URL(url);
-				// HttpURLConnection connection = (HttpURLConnection) urlCon
-				// .openConnection();
-				// InputStream inputStream = connection.getInputStream();
-
+				urlCon = new URL(url);
+				HttpURLConnection connection = (HttpURLConnection) urlCon
+						.openConnection();
+				InputStream inputStream = connection.getInputStream();
 				Options options = new Options();
 
 				options.inJustDecodeBounds = true;
@@ -306,14 +203,12 @@ public class MainActivity extends ActionBarActivity {
 				}
 				options.inSampleSize = scale;
 				options.inJustDecodeBounds = false;
-				// HttpURLConnection connection2 = (HttpURLConnection) urlCon
-				// .openConnection();
-				// InputStream inputStream2 = connection2.getInputStream();
-
-				ByteArrayInputStream inputStream2 = new ByteArrayInputStream(bs);
+				HttpURLConnection connection2 = (HttpURLConnection) urlCon
+						.openConnection();
+				InputStream inputStream2 = connection2.getInputStream();
 				showBitmap = BitmapFactory.decodeStream(inputStream2, null,
 						options);
-
+			
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

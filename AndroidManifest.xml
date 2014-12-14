@@ -20,6 +20,10 @@
         <activity
             android:name="com.example.listpics.MainActivity"
             android:label="@string/app_name" >
+        </activity>
+        <activity
+            android:name="com.listadapter.test.ListMainAct"
+            android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
